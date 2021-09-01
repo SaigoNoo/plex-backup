@@ -1,0 +1,117 @@
+#/bin/bash
+##### CONFIG #####
+backupdir=$(echo '/usb/usb1/SYSTEM/backup-metadata')
+plexmetadatadir=$(echo "/var/lib/plexmediaserver/Library/Application Support/Plex Media Server")
+##### PAS TOUCHER ######
+year=$(date +%Y)
+month=$(date +%m)
+day=$(date +%d)
+hour=$(date +%Hh%M)
+###########  END  ############
+printf "\033c"
+echo "Merci d'utiliser Plex-Backup !"
+echo "------------------------------"
+echo ""
+echo "A l'aide de ce script, vous saurez créer des backup et les importer dans votre installation Plex..."
+echo "C'est à dire:"
+echo " - L'état de lecture des utilisateurs (Nombre d'épisodes lus, reprendre là où il s'est arrêté, ...)"
+echo " - Mais aussi les métadonnées des médias (affiches manuellement ajoutées, fonds, métadatas écrits, etc...)"
+echo " - Et pleins d'autres paramètres"
+echo ""
+echo "----------------------------------------------------------------------------------------------------------"
+echo ""
+echo "Choix possibles:"
+echo "----------------"
+echo " 1 - Création d'une backup"
+echo " 2 - Lister les backups"
+echo " 3 - Importer une backup"
+echo ""
+echo -e "Que voulez-vous faire: \c"
+read choice1
+if [ $choice1 = 1 ]
+then
+	printf "\033c"
+	echo " 1 - Création d'une backup"
+	echo "--------------------------"
+	echo ""
+	echo "Une backup va se faire... Elle se situera dans le dossier $backupdir/$year/$month/$day/$hour à partir du dossier des métadatas de Plex ("$plexmetadatadir")"
+	echo "Pour éviter des modifications du dossier Plex durant la copie (changement de métadonnées, ou lecture d'un épisode), nous allons interrompre le service Plex, et le réactiveront a la fin de la copie..."
+	read -p "Si cela vous va, tapez sur Enter, sinon faites CTRL-C pour annuler le tout !"
+	sudo systemctl stop plexmediaserver
+	mkdir $backupdir/$year/
+	mkdir $backupdir/$year/$month/
+	mkdir $backupdir/$year/$month/$day
+	mkdir $backupdir/$year/$month/$day/$hour
+	printf "\033c"
+	echo "Copie en cours:"
+	echo "---------------"
+	cp -r "$plexmetadatadir"/Cache "$plexmetadatadir"/Codecs "$plexmetadatadir"/'Crash Reports' "$plexmetadatadir"/Diagnostics "$plexmetadatadir"/Media "$plexmetadatadir"/Metadata "$plexmetadatadir"/Plug-ins "$plexmetadatadir"/'Plug-in Support' $backupdir/$year/$month/$day/$hour
+	sudo systemctl start plexmediaserver
+	echo ""
+	echo "---------------"
+	echo "Backup terminée"
+	echo "---------------" 
+elif [ $choice1 = 2 ]
+then
+        printf "\033c"
+	echo " 2 - Lister les backups"
+        echo "-----------------------"
+	ls $backupdir
+	echo ""
+        echo -e "Quelle année: \c"
+	read yearsearch
+	printf "\033c"
+        echo " 2 - Lister les backups"
+	echo "-----------------------"
+	ls $backupdir/$yearsearch/
+        echo ""
+	echo -e "Quel mois: \c"
+	read monthsearch
+	printf "\033c"
+        echo " 2 - Lister les backups"
+        echo "-----------------------"
+	ls $backupdir/$yearsearch/$monthsearch/
+        echo ""
+        echo -e "Quel jour: \c"
+        read daysearch
+        printf "\033c"
+	echo "Voici les backups disponibles pour le $daysearch/$monthsearch/$yearsearch:"
+	echo "-----------------------------------------------------------------"
+        echo ""
+	ls $backupdir/$yearsearch/$monthsearch/$daysearch/
+else
+        printf "\033c"
+        echo " 3 - Importer une backup"
+        echo "------------------------"
+	echo ""
+	echo "Rechercher une backup:"
+	echo "----------------------"
+	ls $backupdir
+	echo -e "Année: \c"
+	read yearsearch
+	ls $backupdir/$yearsearch
+	echo -e "Mois: \c"
+	read monthsearch
+	ls $backupdir/$yearsearch/$monthsearch
+	echo -e "Jour: \c"
+	read daysearch
+	ls $backupdir/$yearsearch/$monthsearch/$daysearch
+	echo -e "Heure: \c"
+	read hoursearch
+	echo ""
+	echo "Vous avez séléctionné la backup suivante du $daysearch $monthsearch $yearsearch faite à $hoursearch"
+	echo "Pour éviter des modifications du dossier Plex durant la copie (changement de métadonnées, ou lecture d'un épisode, voir corruption de fichiers...), nous allons interrompre le service Plex, et le réactiveront a la fin de la copie..."
+        read -p "Si cela vous va, tapez sur Enter, sinon faites CTRL-C pour annuler le tout !"
+        sudo systemctl stop plexmediaserver
+	sudo rm -r "$plexmetadatadir"/Cache "$plexmetadatadir"/Codecs "$plexmetadatadir"/'Crash Reports' "$plexmetadatadir"/Diagnostics "$plexmetadatadir"/Media "$plexmetadatadir"/Metadata "$plexmetadatadir"/Plug-ins "$plexmetadatadir"/'Plug-in Support'
+	printf "\033c"
+        echo "Copie en cours:"
+        echo "---------------"
+	sudo cp -r $backupdir/$yearsearch/$monthsearch/$daysearch/$hoursearch/* "$plexmetadatadir"/
+	sudo chown -R plex:plex "$plexmetadatadir"
+	sudo systemctl start plexmediaserver
+        echo ""
+        echo "---------------"
+        echo "Importation terminée"
+        echo "---------------"
+fi
