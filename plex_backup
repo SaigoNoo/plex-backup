@@ -1,0 +1,144 @@
+#!/bin/bash
+
+##### CONFIG FILES #####
+backupdir="/usb/usb1/SYSTEM/backup-metadata"
+plexmetadatadir="/var/lib/plexmediaserver/Library/Application Support/Plex Media Server"
+###########  FUNCTIONS  ############
+function create() {
+  clear
+  echo """
+  1 - Création d'une backup
+  --------------------------
+  Un backup va se faire...
+  Elle se situera dans le dossier $backupdir/$year/$month/$day/$hour à partir du dossier des métadatas de Plex ("$plexmetadatadir")
+  Pour éviter des modifications du dossier Plex durant la copie (changement de métadonnées, ou lecture d'un épisode), 
+  nous allons interrompre le service Plex, et le réactiveront a la fin de la copie...
+  """
+  read -p "Si cela vous va, tapez sur Enter, sinon faites CTRL-C pour annuler le tout !"
+  sudo systemctl stop plexmediaserver
+  year=$(date +%Y)
+  month=$(date +%m)
+  day=$(date +%d)
+  hour=$(date +%Hh%M)
+  mkdir -p $backupdir/$year/$month/$day/$hour
+  clear
+  echo """
+  Copie en cours:
+  ---------------
+  """
+  cp -r "$plexmetadatadir/Cache" "$plexmetadatadir/Codecs" "$plexmetadatadir/Crash Reports" \
+  "$plexmetadatadir/Diagnostics" "$plexmetadatadir/Media" "$plexmetadatadir/Metadata" \
+  "$plexmetadatadir/Plug-ins" "$plexmetadatadir/Plug-in Support" \
+  "$backupdir/$year/$month/$day/$hour"
+  sudo systemctl start plexmediaserver
+  echo """
+  ---------------
+  Backup terminée
+  ---------------
+  """ 
+}
+
+function list() {
+  clear
+  echo """
+  2 - Lister les backups
+  -----------------------
+  """
+  ls "$backupdir"
+  read -p "Quelle année: " yearsearch
+  clear
+  echo """
+  2 - Lister les backups
+  -----------------------
+  """
+  ls "$backupdir/$yearsearch/"
+  read -p "Quel mois: " monthsearch
+  clear
+  echo """
+  2 - Lister les backups
+  -----------------------
+  """
+  ls "$backupdir/$yearsearch/$monthsearch/"
+  read -p "Quel jour: " daysearch
+  clear
+  echo """
+  Voici les backups disponibles pour le $daysearch/$monthsearch/$yearsearch:
+  -------------------------------------------------
+  """
+  ls "$backupdir/$yearsearch/$monthsearch/$daysearch/"
+}
+
+function import() {
+  clear
+  echo """
+  3 - Importer une backup
+  ------------------------
+  Rechercher une backup:
+  ----------------------
+  """
+  ls "$backupdir"
+  read -p "Année: " yearsearch
+  ls "$backupdir/$yearsearch"
+  read -p "Mois: " monthsearch
+  ls "$backupdir/$yearsearch/$monthsearch"
+  read -p "Jour: " daysearch
+  ls "$backupdir/$yearsearch/$monthsearch/$daysearch"
+  read -p "Heure: " hoursearch
+  echo """
+  Vous avez séléctionné la backup suivante du $daysearch $monthsearch $yearsearch faite à $hoursearch
+  Pour éviter des modifications du dossier Plex durant la copie (changement de métadonnées, ou lecture d'un épisode, voir corruption de fichiers...),
+  nous allons interrompre le service Plex, et le réactiveront a la fin de la copie..
+  """
+  read -p "Si cela vous va, tapez sur Enter, sinon faites CTRL-C pour annuler le tout !"
+  sudo systemctl stop plexmediaserver
+  sudo rm -r "$plexmetadatadir/Cache" "$plexmetadatadir/Codecs" "$plexmetadatadir/Crash Reports" \
+  "$plexmetadatadir/Diagnostics" "$plexmetadatadir/Media" "$plexmetadatadir/Metadata" \
+  "$plexmetadatadir/Plug-ins" "$plexmetadatadir/Plug-in Support"
+  clear
+  echo """
+  Copie en cours:
+  ---------------
+  """
+  sudo cp -r $backupdir/$yearsearch/$monthsearch/$daysearch/$hoursearch/* "$plexmetadatadir"/
+  sudo chown -R plex:plex "$plexmetadatadir"
+  sudo systemctl start plexmediaserver
+  echo """
+  ---------------
+  Importation terminée
+  ---------------
+  """
+}
+
+function menu() {
+  clear
+  echo """
+  Merci d'utiliser Plex-Backup !
+  ------------------------------
+  A l'aide de ce script, vous saurez créer des backup et les importer dans votre installation Plex...
+  C'est à dire:
+  - L'état de lecture des utilisateurs (Nombre d'épisodes lus, reprendre là où il s'est arrêté, ...)
+  - Mais aussi les métadonnées des médias (affiches manuellement ajoutées, fonds, métadatas écrits, etc...)
+  - Et pleins d'autres paramètres
+  ----------------------------------------------------------------------------------------------------------
+  Choix possibles:
+  ----------------
+  1 - Création d'une backup
+  2 - Lister les backups
+  3 - Importer une backup
+  4 - Quitter
+  """
+  read -p "Que voulez-vous faire: " choice
+  case "$choice" in
+    1) create;;
+    2) list;;
+    3) import;;
+    4) return 1;;
+    *) echo "wrong choice :)";;
+  esac
+  read -p "Press Enter to continue"
+  return 0
+}
+
+##### MAIN LOOP #####
+while menu;do :;done
+echo "Bye-Bye :)"
